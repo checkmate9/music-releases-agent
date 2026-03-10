@@ -1,0 +1,9 @@
+{
+  "name": "music-releases-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Daily new music releases digest via Telegram",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
