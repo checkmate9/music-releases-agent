@@ -3,4 +3,5 @@
 node_modules/
 seen_releases.json
 agent.log
+bot.log
 .DS_Store
