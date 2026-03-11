@@ -165,11 +165,12 @@ async function poll() {
           console.error('Agent error:', err.message);
           await sendMessage(chatId, `❌ Agent failed:\n<code>${err.message.slice(0, 300)}</code>`);
         } else {
-          // Show last few meaningful log lines as confirmation
-          const summary = stdout.split('\n')
-            .filter(l => l.trim() && !l.startsWith('    MB '))
-            .slice(-6).join('\n');
-          await sendMessage(chatId, `✅ Done!\n<code>${summary.slice(0, 500)}</code>`);
+          const sent = stdout.includes('✅') && stdout.includes('Sent');
+          if (!sent) {
+            const matchLine = stdout.split('\n').find(l => l.includes('Genre-matched')) || 'No new matching releases.';
+            await sendMessage(chatId, `🔍 Done — ${matchLine.trim()}`);
+          }
+          // If digest was sent, index.js already posted to Telegram — no second message needed
         }
       }
     }
