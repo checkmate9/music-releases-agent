@@ -118,10 +118,14 @@ async function sendMessage(chatId, text) {
 
 // ---------------------------------------------------------------------------
 // Run the agent as a child process
+// Use /bin/bash (which has Full Disk Access) to spawn node so it can
+// read files inside ~/Documents without permission errors.
 // ---------------------------------------------------------------------------
 function runAgent() {
+  const indexPath = path.join(__dirname, 'index.js');
+  const nodeCmd   = `/opt/homebrew/bin/node ${indexPath}`;
   return new Promise(resolve => {
-    execFile(process.execPath, [path.join(__dirname, 'index.js')], { cwd: __dirname },
+    execFile('/bin/bash', ['-c', nodeCmd], { cwd: __dirname },
       (err, stdout, stderr) => resolve({ err, stdout: stdout + stderr })
     );
   });

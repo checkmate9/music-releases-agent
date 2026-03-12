@@ -1,7 +1,11 @@
 #!/bin/bash
 # Persistent launcher for bot.js — auto-restarts on crash
 NODE="/opt/homebrew/bin/node"
-BOT="$(dirname "$0")/bot.js"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+BOT="$DIR/bot.js"
+
+# Always cd into the bot directory so node's process.cwd() works
+cd "$DIR"
 
 while true; do
   $NODE "$BOT"
