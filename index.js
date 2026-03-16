@@ -397,6 +397,7 @@ async function main() {
 
   // 4. Resolve genres via MusicBrainz and filter
   const matched = [];
+  const seenGenreCount = {};
   for (const r of recent) {
     // Split on commas only — "&" is often part of the artist name (e.g. "Iron & Wine")
     const artists = r.artist ? r.artist.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -405,10 +406,23 @@ async function main() {
       const g = await lookupMusicBrainzGenres(name);
       allGenres.push(...g);
     }
-    if (!matchesGenres(allGenres)) continue;
+    if (!matchesGenres(allGenres)) {
+      // Collect genres from unmatched releases so we can suggest them
+      for (const g of allGenres) seenGenreCount[g] = (seenGenreCount[g] || 0) + 1;
+      continue;
+    }
     matched.push({ ...r, matchedGenre: bestMatch(allGenres), spotifyUrl: null, bnm: false });
   }
   console.log(`  Genre-matched: ${matched.length}`);
+
+  // Print top unmatched genres so bot.js can surface them as suggestions
+  const topUnmatched = Object.entries(seenGenreCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([g]) => g);
+  if (topUnmatched.length > 0) {
+    console.log(`  Other genres seen: ${topUnmatched.join(', ')}`);
+  }
 
   // 4b. Fetch Pitchfork score + BNM flag for matched Pitchfork releases
   for (const r of matched.filter(r => r.source === 'pitchfork')) {

@@ -83,9 +83,11 @@ async function schedulerTick() {
 
     // Always notify on Telegram so you know the run happened
     if (!sent) {
-      await sendMessage(TELEGRAM_CHAT_ID,
-        `🔍 Checked at ${String(hour).padStart(2,'0')}:00 IST — ${recent} new releases, ${matched} matched your genres. Nothing to send.`
-      );
+      const otherGenresLine = lines.find(l => l.includes('Other genres seen:')) || '';
+      const otherGenres = otherGenresLine.replace(/.*Other genres seen:\s*/, '').trim();
+      let msg = `🔍 Checked at ${String(hour).padStart(2,'0')}:00 IST — ${recent} new releases, ${matched} matched your genres. Nothing to send.`;
+      if (otherGenres) msg += `\n\n💡 <i>Other genres found: ${otherGenres}</i>`;
+      await sendMessage(TELEGRAM_CHAT_ID, msg);
     }
   }
 }
@@ -171,8 +173,12 @@ async function poll() {
         } else {
           const sent = stdout.includes('✅') && stdout.includes('Sent');
           if (!sent) {
-            const matchLine = stdout.split('\n').find(l => l.includes('Genre-matched')) || 'No new matching releases.';
-            await sendMessage(chatId, `🔍 Done — ${matchLine.trim()}`);
+            const matchLine    = stdout.split('\n').find(l => l.includes('Genre-matched')) || '';
+            const otherLine    = stdout.split('\n').find(l => l.includes('Other genres seen:')) || '';
+            const otherGenres  = otherLine.replace(/.*Other genres seen:\s*/, '').trim();
+            let msg = `🔍 Done — ${matchLine.trim() || 'No new matching releases.'}`;
+            if (otherGenres) msg += `\n\n💡 <i>Other genres found: ${otherGenres}</i>`;
+            await sendMessage(chatId, msg);
           }
           // If digest was sent, index.js already posted to Telegram — no second message needed
         }

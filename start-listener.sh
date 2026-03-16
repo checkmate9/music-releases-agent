@@ -3,6 +3,18 @@
 NODE="/opt/homebrew/bin/node"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 BOT="$DIR/bot.js"
+PIDFILE="$DIR/bot.pid"
+
+# Prevent multiple instances
+if [ -f "$PIDFILE" ]; then
+  OLD_PID=$(cat "$PIDFILE")
+  if kill -0 "$OLD_PID" 2>/dev/null; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Already running (PID $OLD_PID). Exiting."
+    exit 0
+  fi
+fi
+echo $$ > "$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
 
 # Always cd into the bot directory so node's process.cwd() works
 cd "$DIR"
