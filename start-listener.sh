@@ -19,6 +19,10 @@ trap 'rm -f "$PIDFILE"' EXIT
 # Always cd into the bot directory so node's process.cwd() works
 cd "$DIR"
 
+# Redirect all output to the bot's own log inside Documents (bash has FDA)
+exec >> "$DIR/logs/music-bot.log" 2>&1
+mkdir -p "$DIR/logs"
+
 while true; do
   $NODE "$BOT"
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] bot.js exited, restarting in 10s..."
