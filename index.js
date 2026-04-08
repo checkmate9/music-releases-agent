@@ -41,7 +41,8 @@ if (fs.existsSync(GENRES_FILE)) {
 }
 if (!GENRE_LIST) GENRE_LIST = GENRES.split(',').map(g => g.trim().toLowerCase());
 
-const SEEN_PATH = path.join(__dirname, 'seen_releases.json');
+const SEEN_PATH    = path.join(__dirname, 'seen_releases.json');
+const PENDING_PATH = path.join(__dirname, 'pending_spotify.json');
 
 // ---------------------------------------------------------------------------
 // Seen store
@@ -52,6 +53,17 @@ function loadSeen() {
 }
 function saveSeen(set) {
   fs.writeFileSync(SEEN_PATH, JSON.stringify([...set], null, 2));
+}
+
+// ---------------------------------------------------------------------------
+// Pending Spotify store — releases sent without a Spotify link
+// ---------------------------------------------------------------------------
+function loadPending() {
+  try { return JSON.parse(fs.readFileSync(PENDING_PATH, 'utf8')); }
+  catch { return []; }
+}
+function savePending(list) {
+  fs.writeFileSync(PENDING_PATH, JSON.stringify(list, null, 2));
 }
 
 // ---------------------------------------------------------------------------
@@ -469,13 +481,39 @@ async function main() {
   await sendChunked(header, lines);
   console.log('  ✅  Sent!');
 
-  // 6. Mark seen — store both slug and normalised artist+title key to prevent cross-source dupes
+  // 6. Mark ALL matched releases as seen immediately (prevents duplicate sends).
+  //    Releases sent without a Spotify link go into pending_spotify.json for follow-up.
+  const pending = loadPending();
   for (const r of matched) {
     seen.add(r.slug);
     seen.add(crossKey(r));
+    if (!r.spotifyUrl) {
+      pending.push({ slug: r.slug, crossKey: crossKey(r), artist: r.artist, title: r.title });
+    }
   }
   saveSeen(seen);
-  console.log(`  Seen store: ${seen.size} slugs`);
+  savePending(pending);
+  console.log(`  Seen store: ${seen.size} slugs | Pending Spotify: ${pending.length}`);
+
+  // 7. Retry pending releases — check if Spotify link is now available and send a brief update
+  if (pending.length > 0) {
+    console.log('  Checking pending releases for Spotify links…');
+    const stillPending = [];
+    for (const p of pending) {
+      if (matched.some(r => r.slug === p.slug)) { stillPending.push(p); continue; } // just sent, skip
+      const url = await searchSpotifyAlbum(p.title, p.artist, token);
+      if (url) {
+        console.log(`    🎧 Spotify now available: ${p.artist} — ${p.title}`);
+        await sendTelegram(`🎧 Now on Spotify: <b>${p.artist}</b> — <i>${p.title}</i>\n<a href="${url}">Open on Spotify</a>`);
+      } else {
+        stillPending.push(p);
+      }
+    }
+    savePending(stillPending);
+    if (stillPending.length !== pending.length)
+      console.log(`  Pending Spotify resolved: ${pending.length - stillPending.length}, remaining: ${stillPending.length}`);
+  }
+
   console.log('Done.');
 }
 
