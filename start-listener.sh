@@ -23,8 +23,19 @@ cd "$DIR"
 exec >> "$DIR/logs/music-bot.log" 2>&1
 mkdir -p "$DIR/logs"
 
+# Exit after 5 days so launchd (KeepAlive=true) restarts the whole process,
+# giving a fresh FDA grant and preventing the EPERM permission decay.
+MAX_RUNTIME=$((5 * 24 * 3600))
+START_TIME=$(date +%s)
+
 while true; do
   $NODE "$BOT"
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] bot.js exited, restarting in 10s..."
   sleep 10
+
+  ELAPSED=$(( $(date +%s) - START_TIME ))
+  if [ "$ELAPSED" -ge "$MAX_RUNTIME" ]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 5-day health restart — handing off to launchd."
+    exit 0
+  fi
 done
