@@ -495,23 +495,30 @@ async function main() {
   savePending(pending);
   console.log(`  Seen store: ${seen.size} slugs | Pending Spotify: ${pending.length}`);
 
-  // 7. Retry pending releases — check if Spotify link is now available and send a brief update
+  // 7. Retry pending releases — batch all resolved Spotify links into one message
   if (pending.length > 0) {
     console.log('  Checking pending releases for Spotify links…');
     const stillPending = [];
+    const resolved = [];
     for (const p of pending) {
       if (matched.some(r => r.slug === p.slug)) { stillPending.push(p); continue; } // just sent, skip
       const url = await searchSpotifyAlbum(p.title, p.artist, token);
       if (url) {
         console.log(`    🎧 Spotify now available: ${p.artist} — ${p.title}`);
-        await sendTelegram(`🎧 Now on Spotify: <b>${p.artist}</b> — <i>${p.title}</i>\n<a href="${url}">Open on Spotify</a>`);
+        resolved.push(`🎧 <b>${p.artist}</b> — <i>${p.title}</i>\n<a href="${url}">Open on Spotify</a>`);
       } else {
         stillPending.push(p);
       }
     }
+    if (resolved.length > 0) {
+      const header = resolved.length === 1
+        ? '🎧 Now on Spotify:'
+        : `🎧 Now on Spotify (${resolved.length} albums):`;
+      await sendTelegram(header + '\n\n' + resolved.join('\n\n'));
+    }
     savePending(stillPending);
-    if (stillPending.length !== pending.length)
-      console.log(`  Pending Spotify resolved: ${pending.length - stillPending.length}, remaining: ${stillPending.length}`);
+    if (resolved.length > 0)
+      console.log(`  Pending Spotify resolved: ${resolved.length}, remaining: ${stillPending.length}`);
   }
 
   console.log('Done.');
