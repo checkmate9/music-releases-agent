@@ -44,7 +44,7 @@ let agentRunning = false;
 // Built-in scheduler (00:00, 06:00, 12:00, 18:00 IST)
 // Replaces cron — runs inside the bot process, handles laptop sleep gracefully
 // ---------------------------------------------------------------------------
-const SCHEDULE_HOURS = [0, 6, 12, 18];
+const SCHEDULE_HOURS = [6];
 const GRACE_MINUTES  = 5;   // fire if within 5 min of scheduled time (handles wake-from-sleep)
 let lastScheduledHour = -1; // prevents double-fire within same hour window
 
